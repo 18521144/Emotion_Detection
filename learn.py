@@ -5,12 +5,10 @@ import numpy as np
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Flatten
 from keras.layers import Conv2D
-from keras.optimizers import Adam
 from keras.layers import MaxPooling2D
-from keras.preprocessing.image import ImageDataGenerator
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QFileDialog
-from PyQt5.QtGui import QPixmap
+
 
 
 emotion_model = Sequential()
@@ -36,7 +34,7 @@ cv2.ocl.setUseOpenCL(False)
 emotion_dict = {0: "   Angry   ", 1: "Disgusted", 2: "  Fearful  ", 3: "   Happy   ", 4: "Neutral  ", 5: "    Sad    ", 6: "Surprised"}
 
 
-emoji_dist={0:"emojis/angry.png",1:"emojis/disgusted.png",2:"emojis/fearful.png",3:"emojis/happy.png",4:"emojis/neutral.png",5:"emojis/sad.png",6:"emojis/surpriced.png"}
+emoji_dist={0:"emojis/angry.png",1:"emojis/disgusted.png",2:"emojis/fearful.png",3:"emojis/happy.png",4:"emojis/neutral.png",5:"emojis/sad.png",6:"emojis/surpriced.png", 7:"E:\Office Portable\Compressed\emoji-creator-project-code\emojis\cute.png"}
 
 
 
@@ -128,9 +126,11 @@ class Ui_MainWindow(object):
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         self.fromVID.toggled.connect(self.fVid)
-        self.pushButton.clicked.connect(self.fIMG)
+        self.pushButton.clicked.connect(self.chooseIMG)
+        self.fromIMG.toggled.connect(self.fIMG)
 #from video
     def fVid(self):
+        global maxindex
         cap = cv2.VideoCapture(0)
         while True:
             # Find haar cascade to draw bounding box around face
@@ -145,7 +145,6 @@ class Ui_MainWindow(object):
                 cv2.rectangle(frame, (x, y-50), (x+w, y+h+10), (255, 0, 0), 2)
                 roi_gray_frame = gray_frame[y:y + h, x:x + w]
                 cropped_img = np.expand_dims(np.expand_dims(cv2.resize(roi_gray_frame, (48, 48)), -1), 0)
-                
                 emotion_prediction = emotion_model.predict(cropped_img)
                 maxindex = int(np.argmax(emotion_prediction))
                 cv2.putText(frame, emotion_dict[maxindex], (x+20, y-60), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
@@ -156,13 +155,36 @@ class Ui_MainWindow(object):
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 #form image
-    def fIMG(self):
+    def chooseIMG(self):
+        global imagePath, _
         imagePath, _ = QFileDialog.getOpenFileName()
         pixmap = QtGui.QPixmap(imagePath)
         self.inLabel.setPixmap(pixmap)
         self.inLabel.resize(pixmap.size())
         self.inLabel.adjustSize()
 
+    def fIMG(self):
+        imagePath, _ = QFileDialog.getOpenFileName()
+        pixmap = QtGui.QPixmap(imagePath)
+        self.inLabel.setPixmap(pixmap)
+        self.inLabel.resize(pixmap.size())
+        self.inLabel.adjustSize()
+        frame = cv2.imread(imagePath)
+        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        bounding_box = cv2.CascadeClassifier('D:\Python\Lib\site-packages\cv2\data\haarcascade_frontalface_default.xml')
+        num_faces = bounding_box.detectMultiScale(gray_frame)
+        for (x, y, w, h) in num_faces:
+            cv2.rectangle(frame, (x, y-50), (x+w, y+h+10), (255, 0, 0), 2)
+            roi_gray_frame = gray_frame[y:y + h, x:x + w]
+            cropped_img = np.expand_dims(np.expand_dims(cv2.resize(roi_gray_frame, (48, 48)), -1), 0)
+            
+            emotion_prediction = emotion_model.predict(cropped_img)
+            
+            maxindex = int(np.argmax(emotion_prediction))
+            cv2.putText(frame, emotion_dict[maxindex], (x+20, y-60), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+            # self.outLabel.setPixmap(QPixmap("emoji_dist[maxindex]"))
+        
+        self.outLabel.setPixmap(QtGui.QPixmap(emoji_dist[maxindex]))
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
